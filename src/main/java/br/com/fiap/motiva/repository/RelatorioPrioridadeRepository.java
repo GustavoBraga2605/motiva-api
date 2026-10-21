@@ -8,7 +8,6 @@ import java.util.List;
 
 public interface RelatorioPrioridadeRepository extends JpaRepository<RelatorioPrioridade, Integer> {
 
-    // Base do endpoint GET /api/relatorios/periodo?inicio=...&fim=...
     List<RelatorioPrioridade> findByDataGeracaoBetween(LocalDate inicio, LocalDate fim);
 
     List<RelatorioPrioridade> findAllByOrderByDataGeracaoDesc();

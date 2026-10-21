@@ -7,7 +7,6 @@ import java.util.List;
 
 public interface TrechoRodoviaRepository extends JpaRepository<TrechoRodovia, Integer> {
 
-    // Derived queries: o Spring gera o SQL a partir do NOME do método
     List<TrechoRodovia> findByNivelVegetacaoGreaterThanEqual(Double minimo);
 
     List<TrechoRodovia> findAllByOrderByNivelVegetacaoDesc();

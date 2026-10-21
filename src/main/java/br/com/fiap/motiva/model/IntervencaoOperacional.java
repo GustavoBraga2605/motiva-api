@@ -25,7 +25,6 @@ import java.time.LocalDate;
 @Table(name = "INTERVENCAO_OPERACIONAL")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "TIPO_SERVICO", discriminatorType = DiscriminatorType.STRING, length = 30)
-// No JSON, o campo "tipoServico" diz qual subclasse criar (POST/PUT)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "tipoServico")
 @JsonSubTypes({
         @JsonSubTypes.Type(value = Pulverizacao.class, name = Pulverizacao.TIPO),

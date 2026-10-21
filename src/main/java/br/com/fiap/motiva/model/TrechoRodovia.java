@@ -11,7 +11,6 @@ import jakarta.persistence.Table;
 @Table(name = "TRECHO_RODOVIA")
 public class TrechoRodovia implements MonitoravelViaIoT {
 
-    // A tabela usa GENERATED ALWAYS AS IDENTITY (não há sequences), então a estratégia é IDENTITY
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
