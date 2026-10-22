@@ -1,0 +1,68 @@
+### 1. Listar trechos
+GET http://localhost:8080/api/trechos
+
+### 2. Buscar trecho por id
+GET http://localhost:8080/api/trechos/1
+
+### 3. Trecho que não existe
+GET http://localhost:8080/api/trechos/999
+
+### 4. Trechos com vegetação >= 50 cm
+GET http://localhost:8080/api/trechos?vegetacaoMinima=50
+
+### 5. Criar trecho (201) - anote o "id" devolvido
+POST http://localhost:8080/api/trechos
+Content-Type: application/json
+
+{"quilometroInicial": 20, "quilometroFinal": 25, "nivelVegetacao": 55.5}
+
+### 6. Criar trecho inválido: vegetação negativa
+POST http://localhost:8080/api/trechos
+Content-Type: application/json
+
+{"quilometroInicial": 20, "quilometroFinal": 25, "nivelVegetacao": -5}
+
+### 7. Atualizar trecho
+PUT http://localhost:8080/api/trechos/4
+Content-Type: application/json
+
+{"quilometroInicial": 20, "quilometroFinal": 26, "nivelVegetacao": 60}
+
+### 8. Registrar crescimento de 5 cm
+PATCH http://localhost:8080/api/trechos/4/crescimento?taxa=4
+
+### 9. Remover trecho
+DELETE http://localhost:8080/api/trechos/4
+
+### 10. Listar equipes
+GET http://localhost:8080/api/equipes
+
+### 11. Criar equipe
+POST http://localhost:8080/api/equipes
+Content-Type: application/json
+
+{"nomeEquipe": "Equipe Leste", "quantidadeFuncionarios": 5, "regiaoAtendimento": "Região Leste"}
+
+### 12. Listar intervenções
+GET http://localhost:8080/api/intervencoes
+
+### 13. Criar intervenção
+POST http://localhost:8080/api/intervencoes
+Content-Type: application/json
+
+{"tipoServico": "ROCADA_MECANIZADA", "trechoId": 3, "observacoes": "Teste via API"}
+
+### 14. Criar intervenção sem tipoServico
+POST http://localhost:8080/api/intervencoes
+Content-Type: application/json
+
+{"trechoId": 3, "observacoes": "sem tipo"}
+
+### 15. Gerar relatório de prioridade
+POST http://localhost:8080/api/relatorios
+
+### 16. Histórico de relatórios
+GET http://localhost:8080/api/relatorios
+
+### 17. Relatórios por período
+GET http://localhost:8080/api/relatorios/periodo?inicio=2026-08-01&fim=2026-10-31
