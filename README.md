@@ -1,192 +1,288 @@
-# Sprint 3 - Sistema MOTIVA
+# MOTIVA - API REST (Sprint 4)
 
-## Integrantes
+API REST do sistema **MOTIVA** para monitoramento de vegetação em rodovias e priorização de intervenções.
+Nesta sprint, o protótipo de console com JDBC puro (Sprint 3) foi migrado para **Spring Boot + Spring Data JPA**,
+reaproveitando o banco Oracle da FIAP e as tabelas modeladas na Sprint 3.
 
-- Bruno Otávio da Cruz Carvalho - RM 562354
-- Gustavo Cordeiro Braga - RM 562247
-- João Vitor Santana Silva Ribeiro - RM 564693
-- Letícia Gabrielle Andrade Temóteo - RM 563985
-- Stefanny Brum dos Santos - RM 566216
+**Disciplina:** Object-Oriented Programming - FIAP
 
-## Sobre o projeto
+**Integrantes:**
 
-O MOTIVA é um sistema de apoio à gestão de manutenção de rodovias, desenvolvido
-ao longo das Sprints 1, 2 e 3 da disciplina de Object Oriented Programming.
-
-Nesta Sprint 3, evoluímos o sistema para persistir seus dados em um banco Oracle
-usando JDBC puro. As classes de domínio criadas nas sprints anteriores
-(`TrechoRodovia`, `EquipeManutencao`, `IntervencaoOperacional`) ganharam os
-campos necessários para virar entidades persistíveis, e passamos a contar com
-uma camada de DAOs para cada uma delas.
-
-## Estrutura do projeto
-
-Os pacotes seguem a convenção de domínio invertido (`br.com.fiap.motiva.*`),
-igual ao padrão usado em aula (`br.com.ecommerce.*`):
-
-```
-src/br/com/fiap/motiva/
-├── db/ConexaoBD.java              # Conexão com o Oracle (Singleton)
-├── model/                          # Entidades de domínio
-│   ├── TrechoRodovia.java              (record)
-│   ├── EquipeManutencao.java           (record)
-│   ├── IntervencaoOperacional.java     (classe abstrata)
-│   ├── Pulverizacao.java               (extends IntervencaoOperacional)
-│   ├── RocadaMecanizada.java           (extends IntervencaoOperacional)
-│   ├── MonitoravelViaIoT.java          (interface)
-│   └── RelatorioPrioridade.java        (record)
-├── dao/                             # Um DAO por entidade
-│   ├── EquipeManutencaoDAO.java
-│   ├── TrechoRodoviaDAO.java
-│   ├── IntervencaoOperacionalDAO.java
-│   └── RelatorioPrioridadeDAO.java
-├── service/GeradorRelatorio.java   # Calcula prioridade e persiste o relatório
-└── main/Main.java                  # Demonstra todas as operações (CRUD completo)
-sql/
-├── seu-script-criacao.sql          # DDL das 4 tabelas
-└── seu-script-dados.sql            # Dados de teste
-```
-
-## O que o Main demonstra
-
-1. Conexão com o banco Oracle
-2. CRUD completo de `EquipeManutencao` (inserir, atualizar, buscar, listar, deletar)
-3. Inserção e listagem de `TrechoRodovia`
-4. Inserção de `IntervencaoOperacional` - uma `RocadaMecanizada` e uma
-   `Pulverizacao`, exercitando o polimorfismo da hierarquia e sua persistência
-   via coluna discriminadora (`TIPO_SERVICO`)
-5. Geração do relatório de prioridade (impresso no console) com persistência
-   automática do resultado
-6. Consulta do histórico de relatórios já salvos
-7. Remoção (`deletar()`) dos registros de teste inseridos na própria execução
-8. Encerramento da conexão
-
-
-## Decisões de design
-
-- **`TrechoRodovia` e `EquipeManutencao` são `record`**: são entidades simples,
-  sem necessidade de herança, então o record elimina boilerplate (equals,
-  hashCode, toString e getters "de graça") e representa bem a entidade que
-  vai para o banco.
-- **`IntervencaoOperacional` continua sendo uma classe abstrata**, não um
-  record - records não podem ser estendidos, e a herança/polimorfismo entre
-  `Pulverizacao` e `RocadaMecanizada` é o ponto central da modelagem OOP desta
-  entidade. A persistência usa uma coluna discriminadora (`TIPO_SERVICO`) para
-  reconstruir a subclasse correta ao consultar o banco.
-- **`RelatorioPrioridade` é uma entidade nova**: antes o cálculo de prioridade
-  só existia no console; agora vira histórico persistido, consultável a
-  qualquer momento.
-- **Tratamento de exceções**: todo acesso ao banco está isolado em blocos
-  `try/catch/finally`, com `PreparedStatement` em todas as queries (nunca
-  concatenação de String) para evitar SQL Injection, e fechamento garantido de
-  recursos e da conexão.
-
-## Tecnologias utilizadas
-
-- Java 17+ (uso de `record` para as entidades simples)
-- JDBC puro (`java.sql.*`), sem frameworks de ORM
-- Oracle Database (ambiente FIAP)
-- Padrão DAO para separar persistência da lógica de negócio
-
-## Hierarquia de classes
-
-O polimorfismo é o ponto central da modelagem de `IntervencaoOperacional`:
-
-```
-IntervencaoOperacional (abstract)
-├── Pulverizacao
-└── RocadaMecanizada
-```
-
-Ambas sobrescrevem `executarServico()` (comportamento) e `getTipoServico()`
-(usado como coluna discriminadora para a persistência reconstruir a subclasse
-correta ao ler do banco).
-
-## Evolução desde as Sprints 1 e 2
-
-| Nesta Sprint 3 foram acrescentadas: 
-| `TrechoRodovia`, `EquipeManutencao` com regras de negócio | Campo `id`; viraram `record` para representar a entidade |
-| `IntervencaoOperacional` com apenas `executarServico()` | Campos `trechoId`, `dataExecucao`, `observacoes` - necessários para persistir |
-| Cálculo de prioridade dentro do `Main` | Vira `RelatorioPrioridade`, entidade nova com histórico salvo no banco |
-| Nenhuma persistência - dados viviam só em memória | `db/`, `dao/` inteiros, novos: conexão Oracle e DAOs com CRUD completo |
-
-## Configuração antes de executar
-
-Por segurança, `src/br/com/fiap/motiva/db/ConexaoBD.java` não contém
-credenciais reais — cada integrante deve preencher as próprias antes de
-rodar (credenciais de banco nunca devem ser commitadas em um repositório
-compartilhado):
-
-```java
-private static final String USUARIO = "SEU_RM_AQUI";
-private static final String SENHA = "SUA_SENHA_AQUI";
-```
-
-Outros pontos de atenção:
-
-- **`ojdbc17.jar`**: precisa estar adicionado como Library/Dependency do
-  projeto (`Project Structure > Modules > Dependencies`), não basta estar só
-  na pasta `lib/`.
-- **Cada RM é um schema Oracle separado**: se você ainda não rodou os scripts
-  SQL com o seu próprio usuário, as tabelas não existem no seu schema ainda.
-  Rode `sql/seu-script-criacao.sql` e depois `sql/seu-script-dados.sql` antes
-  de executar o `Main.java` pela primeira vez.
-- **Classe principal**: a classe totalmente qualificada agora é
-  `br.com.fiap.motiva.main.Main` (mudou por causa do novo caminho de
-  pacotes). Se o IntelliJ reclamar ao rodar, é só criar uma nova configuração
-  de Run clicando na seta verde do arquivo `Main.java` de novo — não precisa
-  reconfigurar SDK nem Library, só a execução em si.
-
-## Exemplo de execução
-
-```
-Conexão com Oracle estabelecida com sucesso!
-
-===== TESTANDO EquipeManutencaoDAO =====
-
-=== INSERIDA: ===
-
---- EQUIPE DE MANUTENÇÃO ---
-Nome da equipe: Equipe Norte
-Quantidade de funcionários: 6
-Região de atendimento: Região Norte
-...
-
-===== TESTANDO IntervencaoOperacionalDAO =====
--- Executando roçada mecanizada... --
-
--- Executando pulverização... --
-
- - TODAS AS INTERVENÇÕES: -
-ROCADA_MECANIZADA no trecho 3 em 2026-09-04
-PULVERIZACAO no trecho 4 em 2026-09-04
-
-===== RELATÓRIO DE PRIORIDADE =====
-1.
-Trecho KM 15 ao 20 --> Vegetação: 90.0 cm
-Prioridade ALTA
--- Intervenção Urgente Necessária --
-...
-
-Relatório salvo no banco com ID: 1
-
-===== HISTÓRICO DE RELATÓRIOS =====
-Relatório #1 (2026-09-04) — Alta: 2 | Média: 4 | Baixa: 2 — 2 trecho(s) em prioridade ALTA, 4 em MÉDIA e 2 em BAIXA.
-
-
-===== TESTANDO deletar() =====
-Intervenções de teste removidas.
-Trechos de teste removidos.
-Equipe de teste removida.
-
-=== CONEXÃO ENCERRADA ===
-```
-
-## Problemas comuns
-
-| Problema | Causa provável |
+| Nome | RM |
 |---|---|
-| `Driver not found` | `ojdbc17.jar` não está nas dependências do módulo |
-| `ORA-01017: invalid username/password` | Usuário/senha incorretos em `ConexaoBD.java` |
-| `ORA-00942: table or view does not exist` | Script `seu-script-criacao.sql` não foi executado |
-| `ORA-02292: integrity constraint violated` | Tentativa de deletar um `TrechoRodovia` que ainda tem `IntervencaoOperacional` associada |
+| Bruno Otávio da Cruz Carvalho | 562354 |
+| Gustavo Cordeiro Braga | 562247 |
+| João Vitor Santana Silva Ribeiro | 564693 |
+| Letícia Gabrielle Andrade Temóteo | 563985 |
+| Stefanny Brum dos Santos | 566216 |
+
+---
+
+## Tecnologias
+
+| Item | Versão / detalhe |
+|---|---|
+| Java | 17 ou superior |
+| Spring Boot | 4.1.0 (`spring-boot-starter-web` + `spring-boot-starter-data-jpa`) |
+| Build | Maven (`pom.xml`) |
+| Banco | Oracle FIAP (`oracle.fiap.com.br:1521:ORCL`) |
+| Driver | `com.oracle.database.jdbc:ojdbc17` (dependência Maven) |
+
+---
+
+## Arquitetura em camadas
+
+Cada camada só conversa com a vizinha: **Controller → Service → Repository → Banco**.
+
+```text
+src/main/java/br/com/fiap/motiva/
+├── MotivaApplication.java          # @SpringBootApplication (main)
+├── model/                          # @Entity: TrechoRodovia, EquipeManutencao,
+│                                   #   IntervencaoOperacional (abstrata) + Pulverizacao,
+│                                   #   RocadaMecanizada, RelatorioPrioridade, NivelPrioridade
+├── repository/                     # Interfaces JpaRepository (sem SQL manual)
+├── service/                        # @Service: validações e motor de prioridade
+├── controller/                     # @RestController: endpoints REST
+└── exception/                      # Exceptions de negócio + @RestControllerAdvice
+```
+
+- **model/**: as classes da Sprint 1 e 2 viraram entidades JPA. A hierarquia `IntervencaoOperacional` usa herança
+  `SINGLE_TABLE`, com a coluna `TIPO_SERVICO` como discriminador.
+- **repository/**: só interfaces. O Spring Data gera a implementação e o SQL.
+- **service/**: toda a regra de negócio (validações da Sprint 1 e motor de prioridade da Sprint 2).
+- **controller/**: só recebe a requisição, chama o Service e devolve JSON. Sem regra de negócio.
+- **exception/**: o `TratadorGlobalDeErros` traduz as exceptions dos Services em códigos HTTP com um JSON de erro padronizado.
+
+---
+
+## Como executar
+
+### 1. Pré-requisitos
+- JDK 17 ou superior
+- Maven (ou o Maven integrado do IntelliJ IDEA)
+- Acesso à rede da FIAP / ao Oracle `oracle.fiap.com.br`
+- Tabelas da Sprint 3 já criadas no seu usuário (scripts na pasta [`sql/`](sql/))
+
+### 2. Configurar as credenciais
+O arquivo `src/main/resources/application.properties` está com **placeholders**. Antes de rodar, substitua:
+
+```properties
+spring.datasource.username=SEU_RM_AQUI
+spring.datasource.password=SUA_SENHA_AQUI
+```
+
+pelos seus dados do Oracle FIAP. **Não faça commit do arquivo com as credenciais reais.**
+
+### 3. Rodar
+
+```bash
+mvn spring-boot:run
+```
+
+Ou, no IntelliJ, execute a classe `MotivaApplication`. Quando aparecer `Started MotivaApplication`,
+a API está disponível em `http://localhost:8080`.
+
+O SQL gerado pelo Hibernate é exibido no console (`spring.jpa.show-sql=true`).
+
+---
+
+## Endpoints
+
+### Trechos - `/api/trechos`
+
+| Método | Rota | Ação | Sucesso | Erros |
+|---|---|---|---|---|
+| GET | `/api/trechos` | Listar todos (filtro opcional `?vegetacaoMinima=50`) | 200 | 400 |
+| GET | `/api/trechos/{id}` | Buscar por ID | 200 | 404 |
+| POST | `/api/trechos` | Criar | 201 | 400 |
+| PUT | `/api/trechos/{id}` | Atualizar | 200 | 400, 404 |
+| DELETE | `/api/trechos/{id}` | Remover | 204 | 400, 404 |
+| PATCH | `/api/trechos/{id}/crescimento?taxa=5` | Somar crescimento (cm) à vegetação | 200 | 400, 404 |
+
+### Equipes - `/api/equipes`
+
+| Método | Rota | Ação | Sucesso | Erros |
+|---|---|---|---|---|
+| GET | `/api/equipes` | Listar todas (filtro opcional `?regiao=...`) | 200 | 400 |
+| GET | `/api/equipes/{id}` | Buscar por ID | 200 | 404 |
+| POST | `/api/equipes` | Criar | 201 | 400 |
+| PUT | `/api/equipes/{id}` | Atualizar | 200 | 400, 404 |
+| DELETE | `/api/equipes/{id}` | Remover | 204 | 404 |
+
+### Intervenções - `/api/intervencoes`
+
+O campo `tipoServico` (`PULVERIZACAO` ou `ROCADA_MECANIZADA`) é obrigatório e define a subclasse criada.
+
+| Método | Rota | Ação | Sucesso | Erros    |
+|---|---|---|---|----------|
+| GET | `/api/intervencoes` | Listar todas (filtro opcional `?trechoId=3`) | 200 | -        |
+| GET | `/api/intervencoes/{id}` | Buscar por ID | 200 | 404      |
+| POST | `/api/intervencoes` | Criar | 201 | 400      |
+| PUT | `/api/intervencoes/{id}` | Atualizar (o tipo não pode mudar) | 200 | 400, 404 |
+| DELETE | `/api/intervencoes/{id}` | Remover | 204 | 404      |
+
+### Relatórios de prioridade - `/api/relatorios`
+
+| Método | Rota | Ação | Sucesso | Erros             |
+|---|---|---|---|-------------------|
+| POST | `/api/relatorios` | Gera o relatório a partir dos trechos atuais e grava no histórico | 201 | 400 (sem trechos) |
+| GET | `/api/relatorios` | Lista o histórico (mais recentes primeiro) | 200 | -                 |
+| GET | `/api/relatorios/periodo?inicio=2026-10-01&fim=2026-10-31` | Consulta por período (datas `AAAA-MM-DD`) | 200 | 400               |
+
+---
+
+## Regras de negócio (camada Service)
+
+**Classificação de prioridade** (limiares da Sprint 2, em `RelatorioPrioridadeService`):
+
+| Nível de vegetação | Prioridade |
+|---|---|
+| ≥ 80 cm | ALTA |
+| de 40 cm a 79,99 cm | MÉDIA |
+| < 40 cm | BAIXA |
+
+**Validações:**
+- Trecho: `quilometroInicial`, `quilometroFinal` e `nivelVegetacao` obrigatórios; `nivelVegetacao` ≥ 0; km inicial ≥ 0; km final maior que o inicial.
+- Trecho com intervenções vinculadas não pode ser removido.
+- Equipe: nome e região obrigatórios; quantidade de funcionários maior que zero.
+- Intervenção: o trecho informado precisa existir; o tipo de serviço não pode ser alterado depois de criada.
+- Relatório: só é gerado se houver trechos; no período, a data inicial não pode ser posterior à final.
+
+**Formato de erro** (JSON padronizado):
+
+```json
+{
+  "status": 404,
+  "erro": "Not Found",
+  "mensagem": "Trecho 999 não encontrado."
+}
+```
+
+---
+
+## Exemplos com cURL
+
+> Os exemplos usam aspas simples (Git Bash, Linux, macOS). No PowerShell do Windows, use `curl.exe` e troque as
+> aspas do JSON por aspas duplas escapadas, ou use o Postman.
+
+**Listar trechos**
+```bash
+curl http://localhost:8080/api/trechos
+```
+
+**Buscar trecho por ID**
+```bash
+curl http://localhost:8080/api/trechos/1
+```
+
+**Trechos com vegetação a partir de 50 cm** (derived query)
+```bash
+curl "http://localhost:8080/api/trechos?vegetacaoMinima=50"
+```
+
+**Criar trecho** (201)
+```bash
+curl -X POST http://localhost:8080/api/trechos \
+  -H "Content-Type: application/json" \
+  -d '{"quilometroInicial": 20, "quilometroFinal": 25, "nivelVegetacao": 55.5}'
+```
+
+**Criar trecho inválido** (400)
+```bash
+curl -X POST http://localhost:8080/api/trechos \
+  -H "Content-Type: application/json" \
+  -d '{"quilometroInicial": 20, "quilometroFinal": 25, "nivelVegetacao": -5}'
+```
+
+**Atualizar trecho** (200)
+```bash
+curl -X PUT http://localhost:8080/api/trechos/5 \
+  -H "Content-Type: application/json" \
+  -d '{"quilometroInicial": 20, "quilometroFinal": 26, "nivelVegetacao": 60}'
+```
+
+**Registrar crescimento de 5 cm** (200)
+```bash
+curl -X PATCH "http://localhost:8080/api/trechos/5/crescimento?taxa=5"
+```
+
+**Remover trecho** (204)
+```bash
+curl -X DELETE http://localhost:8080/api/trechos/5
+```
+
+**Criar equipe** (201)
+```bash
+curl -X POST http://localhost:8080/api/equipes \
+  -H "Content-Type: application/json" \
+  -d '{"nomeEquipe": "Equipe Leste", "quantidadeFuncionarios": 5, "regiaoAtendimento": "Região Leste"}'
+```
+
+**Criar intervenção - roçada mecanizada** (201)
+```bash
+curl -X POST http://localhost:8080/api/intervencoes \
+  -H "Content-Type: application/json" \
+  -d '{"tipoServico": "ROCADA_MECANIZADA", "trechoId": 3, "observacoes": "Teste via API"}'
+```
+
+**Gerar relatório de prioridade** (201)
+```bash
+curl -X POST http://localhost:8080/api/relatorios
+```
+
+**Histórico de relatórios** (200)
+```bash
+curl http://localhost:8080/api/relatorios
+```
+
+**Relatórios por período** (200)
+```bash
+curl "http://localhost:8080/api/relatorios/periodo?inicio=2026-10-01&fim=2026-10-31"
+```
+
+---
+
+## Registro das requisições (prints)
+
+Testes feitos no Postman, com a API rodando em `localhost:8080`.
+
+| # | Requisição | Resultado esperado | Print |
+|---|---|---|---|
+| 1 | `POST /api/trechos` | 201 Created | ![](docs/prints/01-post-trecho-201.png) |
+| 2 | `POST /api/trechos` (vegetação negativa) | 400 Bad Request | ![](docs/prints/02-post-trecho-400.png) |
+| 3 | `PUT /api/trechos/{id}` | 200 OK | ![](docs/prints/03-put-trecho-200.png) |
+| 4 | `PATCH /api/trechos/{id}/crescimento?taxa=5` | 200 OK | ![](docs/prints/04-patch-crescimento-200.png) |
+| 5 | `DELETE /api/trechos/{id}` | 204 No Content | ![](docs/prints/05-delete-trecho-204.png) |
+| 6 | `GET /api/trechos/{id}` (já removido) | 404 Not Found | ![](docs/prints/06-get-trecho-404.png) |
+| 7 | `POST /api/equipes` | 201 Created | ![](docs/prints/07-post-equipe-201.png) |
+---
+
+## Perguntas de reflexão
+
+**1. Por que o Repository é uma interface e não uma classe? Quem escreve a implementação e quando?**
+
+O Repository é uma interface porque só declaramos o que precisamos (`findAll`, `save`, `findByRegiaoAtendimento`), sem dizer como fazer. Quem escreve a implementação é o Spring Data JPA, em tempo de execução: quando a aplicação sobe, ele encontra as interfaces que estendem `JpaRepository` (o log mostra "Found 4 JPA repository interfaces") e gera uma implementação para cada uma. Por isso não existe nenhuma classe `...RepositoryImpl` escrita por nós.
+
+**2. O pattern DAO da Sprint 3 "morreu" na migração ou só mudou de forma?**
+
+Só mudou de forma. A função continua a mesma, isolar o acesso ao banco em uma camada própria, mas agora o Repository faz esse papel e é gerado pelo framework. Na Sprint 3 escrevíamos SQL, `PreparedStatement`, `ResultSet` e o controle da conexão à mão (o DAO de equipe tinha cerca de 375 linhas); agora são anotações e uma interface, e a conexão é gerenciada pelo Spring.
+
+**3. Por que a validação de `nivelVegetacao >= 0` deve ficar no Service e não no Controller?**
+
+Porque `nivelVegetacao >= 0` é uma regra de negócio, e não do HTTP. O Controller é só uma das portas de entrada: se a regra estivesse nele, qualquer outra chamada (outro Controller, outro Service ou um teste) poderia criar um trecho com vegetação negativa sem ser barrada. No Service a regra vale para todos os caminhos, fica em um só lugar e é fácil de testar.
+
+**4. No JDBC puro vocês escreviam SQL. Onde está o SQL do `findByTipo()`? Quem o gerou?**
+
+Ninguém escreveu esse SQL à mão. O Spring Data lê o nome do método (`findBy` + nome da propriedade) e o Hibernate transforma isso em SQL no dialeto Oracle, em tempo de execução. No nosso projeto o equivalente é `findByRegiaoAtendimento`, em `EquipeManutencaoRepository`, e o SQL gerado aparece no console por causa de `spring.jpa.show-sql=true`:
+
+```sql
+select
+  em1_0.id,
+  em1_0.nome_equipe,
+  em1_0.quantidade_funcionarios,
+  em1_0.regiao_atendimento
+from
+  equipe_manutencao em1_0
+where
+  em1_0.regiao_atendimento=?
+```

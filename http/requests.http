@@ -10,7 +10,7 @@ GET http://localhost:8080/api/trechos/999
 ### 4. Trechos com vegetação >= 50 cm
 GET http://localhost:8080/api/trechos?vegetacaoMinima=50
 
-### 5. Criar trecho (201) - anote o "id" devolvido
+### 5. Criar trecho - anote o "id" devolvido
 POST http://localhost:8080/api/trechos
 Content-Type: application/json
 
